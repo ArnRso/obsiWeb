@@ -3,10 +3,8 @@
     <UBreadcrumb :items="breadcrumbItems" class="mb-4" />
     <UCard class="mb-4">
       <NotesToolbar
-        :view-mode="viewMode"
         :is-selection-mode="isSelectionMode"
         :selected-for-delete="selectedItems"
-        @update:view-mode="(val) => (viewMode = val)"
         @new-folder="onNewFolder"
         @new-file="onNewFile"
         @toggle-selection="toggleSelectionMode"
@@ -60,7 +58,6 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
-import { useCookie } from "#app";
 import { noteLinkFromPath } from "~/services/noteService";
 import { useNotes } from "~/composables/useNotes";
 import { useNoteActions } from "~/composables/useNoteActions";
@@ -74,13 +71,6 @@ const { slug } = useRoute().params;
 const path = Array.isArray(slug) ? slug.join("/") : slug;
 
 const { items, isFolder, pending, error, refresh } = useNotes(path);
-const viewModeCookie = useCookie<"grid" | "list" | "detail">("folderViewMode", {
-  default: () => "grid",
-});
-const viewMode = ref(viewModeCookie.value);
-watch(viewMode, (val) => {
-  viewModeCookie.value = val;
-});
 
 const note = ref<NoteContent | null>(null);
 async function fetchRawMarkdown(cleanPath: string): Promise<string> {

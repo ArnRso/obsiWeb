@@ -1,13 +1,5 @@
 <template>
   <div class="flex items-center gap-2 mb-2">
-    <UButtonGroup size="md">
-      <UButton
-        :color="viewMode === 'grid' ? 'primary' : 'neutral'"
-        icon="i-lucide-grid"
-        aria-label="Affichage en icônes"
-        @click="$emit('update:view-mode', 'grid')"
-      />
-    </UButtonGroup>
     <UButton
       icon="i-lucide-folder-plus"
       color="primary"
@@ -45,12 +37,10 @@
 </template>
 <script setup lang="ts">
 defineProps<{
-  viewMode: string;
   isSelectionMode: boolean;
   selectedForDelete: string[];
 }>();
 defineEmits([
-  "update:view-mode",
   "new-folder",
   "new-file",
   "toggle-selection",
