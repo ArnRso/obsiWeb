@@ -1,44 +1,63 @@
-import { promises as fs } from 'fs'
-import path from 'path'
-import { defineEventHandler, getQuery } from 'h3'
-type Dirent = import('fs').Dirent;
+import { promises as fs } from "fs";
+import path from "path";
+import { defineEventHandler, getQuery } from "h3";
+// Types pour le payload reçu et retourné
+import type { NoteItem, NotesApiResponse, NotesQuery } from "../../types/notes";
+// Ajout du type Dirent pour le typage
+import type { Dirent } from "fs";
 
 function sortFilesAndFolders(list: Dirent[]): Dirent[] {
   return list.sort((a, b) => {
-    if (a.isDirectory() !== b.isDirectory()) return a.isDirectory() ? -1 : 1
-    return a.name.localeCompare(b.name)
-  })
+    if (a.isDirectory() !== b.isDirectory()) return a.isDirectory() ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 }
 
-export default defineEventHandler(async (event) => {
-  const { dir = '' } = getQuery(event)
+export default defineEventHandler(async (event): Promise<NotesApiResponse> => {
+  const { dir = "" }: NotesQuery = getQuery(event);
   // On pointe vers content/notes au lieu de notes
-  const notesDir = path.resolve(process.cwd(), 'content/notes')
+  const notesDir = path.resolve(process.cwd(), "content/notes");
   // Sécurise le chemin pour éviter les accès hors du dossier notes
-  const safeDir = String(dir).replace(/\.\.|^\//g, '')
-  const targetDir = path.join(notesDir, safeDir)
+  const safeDir = String(dir).replace(/\.{2}|^\//g, "");
+  const targetDir = path.join(notesDir, safeDir);
 
-  const items: { name: string; type: 'file' | 'folder'; path: string }[] = []
+  const items: NoteItem[] = [];
+  let currentType: "file" | "folder" | "notfound" = "notfound";
   try {
-    const list = sortFilesAndFolders(await fs.readdir(targetDir, { withFileTypes: true }) as unknown as Dirent[])
-    for (const file of list) {
-      if (file.name.startsWith('.')) continue // ignore fichiers cachés
-      if (file.isDirectory()) {
-        items.push({
-          name: file.name,
-          type: 'folder',
-          path: path.relative(notesDir, path.join(targetDir, file.name))
-        })
-      } else if (file.name.endsWith('.md')) {
-        items.push({
-          name: file.name,
-          type: 'file',
-          path: path.relative(notesDir, path.join(targetDir, file.name))
-        })
+    const stat = await fs.stat(targetDir);
+    if (stat.isDirectory()) {
+      currentType = "folder";
+      const list = sortFilesAndFolders(
+        (await fs.readdir(targetDir, {
+          withFileTypes: true,
+        })) as unknown as Dirent[]
+      );
+      for (const file of list) {
+        if (file.name.startsWith(".")) continue; // ignore fichiers cachés
+        if (file.isDirectory()) {
+          items.push({
+            name: file.name,
+            type: "folder",
+            path: path.relative(notesDir, path.join(targetDir, file.name)),
+          });
+        } else if (file.name.endsWith(".md")) {
+          items.push({
+            name: file.name,
+            type: "file",
+            path: path.relative(notesDir, path.join(targetDir, file.name)),
+          });
+        }
       }
+    } else if (stat.isFile()) {
+      currentType = "file";
+      // Un fichier n'a pas d'items, mais on pourrait retourner des infos si besoin
     }
-    return { items }
+    return { items, currentType };
   } catch {
-    return { items: [], error: 'Dossier introuvable' }
+    return {
+      items: [],
+      currentType: "notfound",
+      error: "Dossier ou fichier introuvable",
+    };
   }
-})
+});
