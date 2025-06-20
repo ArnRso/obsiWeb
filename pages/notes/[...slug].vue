@@ -3,26 +3,30 @@
     <UBreadcrumb :items="breadcrumbItems" class="mb-4" />
     <UCard class="mb-4">
       <template v-if="isFolder">
-        <UButtonGroup size="md" class="mb-2">
-          <UButton
-            :color="viewMode === 'grid' ? 'primary' : 'neutral'"
-            icon="i-lucide-grid"
-            aria-label="Affichage en icônes"
-            @click="viewMode = 'grid'"
-          />
-          <UButton
-            :color="viewMode === 'list' ? 'primary' : 'neutral'"
-            icon="i-lucide-list"
-            aria-label="Affichage en liste"
-            @click="viewMode = 'list'"
-          />
-          <UButton
-            :color="viewMode === 'detail' ? 'primary' : 'neutral'"
-            icon="i-lucide-align-left"
-            aria-label="Affichage en détail"
-            @click="viewMode = 'detail'"
-          />
-        </UButtonGroup>
+        <div class="flex items-center gap-2 mb-2">
+          <UButtonGroup size="md">
+            <UButton
+              :color="viewMode === 'grid' ? 'primary' : 'neutral'"
+              icon="i-lucide-grid"
+              aria-label="Affichage en icônes"
+              @click="viewMode = 'grid'"
+            />
+            <UButton
+              :color="viewMode === 'list' ? 'primary' : 'neutral'"
+              icon="i-lucide-list"
+              aria-label="Affichage en liste"
+              @click="viewMode = 'list'"
+            />
+            <UButton
+              :color="viewMode === 'detail' ? 'primary' : 'neutral'"
+              icon="i-lucide-align-left"
+              aria-label="Affichage en détail"
+              @click="viewMode = 'detail'"
+            />
+          </UButtonGroup>
+          <UButton icon="i-lucide-folder-plus" color="primary" class="ml-4" @click="onNewFolder">Nouveau dossier</UButton>
+          <UButton icon="i-lucide-file-plus" color="primary" @click="onNewFile">Nouveau fichier</UButton>
+        </div>
       </template>
       <template v-else>
         <div class="flex items-center gap-4">
@@ -105,17 +109,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useCookie } from '#app'
 const isEditMode = ref(false)
 const noteContent = ref('')
 const { slug } = useRoute().params
 const path = Array.isArray(slug) ? slug.join('/') : slug
 
-const { data, pending, error } = await useFetch(`/api/notes?dir=${encodeURIComponent(path)}`)
-const items = data?.value?.items || []
+// Remplace la déclaration de useFetch pour récupérer refresh
+const { data, pending, error, refresh } = useFetch(`/api/notes?dir=${encodeURIComponent(path)}`)
+const items = computed(() => data.value?.items || [])
 
-const isFolder = items.length > 0
+const isFolder = computed(() => Array.isArray(data.value?.items))
 const viewModeCookie = useCookie<'grid' | 'list' | 'detail'>('folderViewMode', { default: () => 'grid' })
 const viewMode = ref(viewModeCookie.value)
 watch(viewMode, (val) => { viewModeCookie.value = val })
@@ -144,7 +149,7 @@ async function fetchRawMarkdown(cleanPath: string): Promise<string> {
     return ''
   }
 }
-if (!isFolder) {
+if (!isFolder.value) {
   // On retire l'extension .md si présente
   const cleanPath = path.replace(/\.md$/, '')
   // cleanPath est du type 'bienvenue' ou 'projets/alpha'
@@ -169,13 +174,23 @@ if (!isFolder) {
   }, { immediate: true });
 }
 
+// Types pour la création de fichier/dossier
+interface CreateNotePayload {
+  type: 'file' | 'folder';
+  path: string;
+}
+interface CreateNoteResponse {
+  success: boolean;
+  error?: string;
+}
+
 const breadcrumbItems = Array.isArray(slug)
   ? [
       { label: 'Notes', to: '/notes' },
       ...slug.map((part, idx, arr) => {
         // Ajoute .md uniquement au dernier segment si c'est un fichier
         const isLast = idx === arr.length - 1
-        const isFile = !isFolder && isLast
+        const isFile = !isFolder.value && isLast
         return {
           label: part.replace(/\.md$/, ''),
           to: '/notes/' + arr.slice(0, idx + 1).map(encodeURIComponent).join('/') + (isFile ? '.md' : '')
@@ -183,4 +198,20 @@ const breadcrumbItems = Array.isArray(slug)
       }),
     ]
   : [{ label: 'Notes', to: '/notes' }, { label: slug, to: '/notes/' + slug }];
+
+async function onNewFolder() {
+  const name = window.prompt('Nom du nouveau dossier ?')
+  if (!name) return
+  const payload: CreateNotePayload = { type: 'folder', path: path ? path + '/' + name : name }
+  await $fetch<CreateNoteResponse>('/api/notes/new', { method: 'post', body: payload })
+  await refresh()
+}
+async function onNewFile() {
+  let name = window.prompt('Nom du nouveau fichier ? (sans extension)')
+  if (!name) return
+  if (!name.endsWith('.md')) name += '.md'
+  const payload: CreateNotePayload = { type: 'file', path: path ? path + '/' + name : name }
+  await $fetch<CreateNoteResponse>('/api/notes/new', { method: 'post', body: payload })
+  await refresh()
+}
 </script>
