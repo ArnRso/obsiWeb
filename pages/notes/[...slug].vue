@@ -40,33 +40,13 @@
       <div v-else>
         <template v-if="isFolder">
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            <div
+            <NoteItem
               v-for="item in items"
               :key="item.path"
-              class="flex flex-col items-center cursor-pointer group relative rounded-lg transition-all"
-              :class="isSelectionMode && selectedForDelete.includes(item.path) ? 'ring-2 ring-primary bg-primary/10' : ''"
-            >
-              <div
-                class="flex flex-col items-center w-full"
-                @click="isSelectionMode ? (toggleSelectItem(item.path), $event.preventDefault()) : undefined"
-              >
-                <NuxtLink
-                  v-if="!isSelectionMode"
-                  :to="`/notes/${item.path.split('/').map(encodeURIComponent).join('/')}`"
-                  class="flex flex-col items-center w-full"
-                >
-                  <UIcon :name="item.type === 'folder' ? 'lucide:folder' : 'lucide:file-text'" class="text-4xl mb-1" :class="item.type === 'folder' ? 'text-yellow-400' : 'text-slate-500'" />
-                  <span class="truncate w-full text-center font-medium">{{ item.name.replace(/\.md$/, '') }}</span>
-                </NuxtLink>
-                <template v-else>
-                  <UIcon :name="item.type === 'folder' ? 'lucide:folder' : 'lucide:file-text'" class="text-4xl mb-1" :class="item.type === 'folder' ? 'text-yellow-400' : 'text-slate-500'" />
-                  <span class="truncate w-full text-center font-medium">{{ item.name.replace(/\.md$/, '') }}</span>
-                  <div v-if="selectedForDelete.includes(item.path)" class="absolute top-1 left-1 z-10 w-5 h-5 rounded-full border border-primary bg-white flex items-center justify-center pointer-events-none shadow">
-                    <UIcon name="lucide:check" class="text-primary text-lg" />
-                  </div>
-                </template>
-              </div>
-            </div>
+              :item="item"
+              :is-selected="isSelectionMode && selectedForDelete.includes(item.path)"
+              @click="onNoteItemClick"
+            />
           </div>
         </template>
         <template v-else-if="note">
@@ -92,6 +72,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useCookie } from '#app'
+import { noteLinkFromPath } from '~/services/noteService'
 import type { CreateNotePayload, CreateNoteResponse, DeleteNotePayload, DeleteNoteResponse, NoteContent } from '~/types/notes'
 const isEditMode = ref(false)
 const noteContent = ref('')
@@ -150,7 +131,7 @@ if (!isFolder.value) {
 
 const breadcrumbItems = Array.isArray(slug)
   ? [
-      { label: 'Notes', to: '/notes' },
+      { label: 'Notes', to: noteLinkFromPath('') },
       ...slug.map((part, idx, arr) => {
         const isLast = idx === arr.length - 1
         const isFile = !isFolder.value && isLast
@@ -159,11 +140,11 @@ const breadcrumbItems = Array.isArray(slug)
         if (isFile && !segment.endsWith('.md')) segment += '.md'
         return {
           label: part.replace(/\.md$/, ''),
-          to: '/notes/' + segment
+          to: noteLinkFromPath(segment)
         }
       }),
     ]
-  : [{ label: 'Notes', to: '/notes' }, { label: slug, to: '/notes/' + slug }];
+  : [{ label: 'Notes', to: noteLinkFromPath('') }, { label: slug, to: noteLinkFromPath(slug) }];
 
 async function onNewFolder() {
   const name = window.prompt('Nom du nouveau dossier ?')
@@ -194,11 +175,11 @@ async function onDelete() {
     if (isFolder.value) {
       // Navigue au dossier parent
       const parent = path.split('/').slice(0, -1).join('/')
-      await navigateTo('/notes/' + parent)
+      await navigateTo(noteLinkFromPath(parent))
     } else {
       // Navigue au dossier parent après suppression d'un fichier
       const parent = path.split('/').slice(0, -1).join('/')
-      await navigateTo('/notes/' + parent)
+      await navigateTo(noteLinkFromPath(parent))
     }
   } else {
     window.alert('Erreur lors de la suppression : ' + (res.error || ''))
@@ -211,11 +192,6 @@ const selectedForDelete = ref<string[]>([])
 function toggleSelectionMode() {
   isSelectionMode.value = !isSelectionMode.value
   if (!isSelectionMode.value) selectedForDelete.value = []
-}
-function toggleSelectItem(path: string) {
-  const idx = selectedForDelete.value.indexOf(path)
-  if (idx === -1) selectedForDelete.value.push(path)
-  else selectedForDelete.value.splice(idx, 1)
 }
 function cancelSelectionMode() {
   isSelectionMode.value = false
@@ -230,5 +206,15 @@ async function onDeleteSelected() {
   isSelectionMode.value = false
   selectedForDelete.value = []
   await refresh()
+}
+
+function onNoteItemClick(path: string) {
+  if (isSelectionMode.value) {
+    const idx = selectedForDelete.value.indexOf(path)
+    if (idx === -1) selectedForDelete.value.push(path)
+    else selectedForDelete.value.splice(idx, 1)
+  } else {
+    navigateTo(noteLinkFromPath(path))
+  }
 }
 </script>
