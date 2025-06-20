@@ -107,7 +107,7 @@ const viewModeCookie = useCookie<'grid' | 'list' | 'detail'>('folderViewMode', {
 const viewMode = ref(viewModeCookie.value)
 watch(viewMode, (val) => { viewModeCookie.value = val })
 
-let note: NoteContent | null = null;
+const note = ref<NoteContent | null>(null);
 async function fetchRawMarkdown(cleanPath: string): Promise<string> {
   try {
     // cleanPath doit être relatif à content/notes, sans /notes/ devant
@@ -132,11 +132,9 @@ if (!isFolder.value) {
     `note-${cleanPath}`,
     () => queryCollection('content').path(`/notes/${cleanPath}`).first()
   );
-  note = noteData.value as unknown as NoteContent;
-  console.log('note structure', note);
   watch(noteData, async (val) => {
-    note = val as unknown as NoteContent;
-    console.log('note structure', note);
+    note.value = val as unknown as NoteContent;
+    console.log('note structure', note.value);
     if (typeof val?.body === 'string') {
       noteContent.value = val.body;
     } else if (val?.body && typeof val.body === 'object' && (val.body as { value?: unknown }).value) {
@@ -154,12 +152,14 @@ const breadcrumbItems = Array.isArray(slug)
   ? [
       { label: 'Notes', to: '/notes' },
       ...slug.map((part, idx, arr) => {
-        // Ajoute .md uniquement au dernier segment si c'est un fichier
         const isLast = idx === arr.length - 1
         const isFile = !isFolder.value && isLast
+        let segment = arr.slice(0, idx + 1).map(encodeURIComponent).join('/')
+        // Ajoute .md uniquement si c'est un fichier et que le segment ne finit pas déjà par .md
+        if (isFile && !segment.endsWith('.md')) segment += '.md'
         return {
           label: part.replace(/\.md$/, ''),
-          to: '/notes/' + arr.slice(0, idx + 1).map(encodeURIComponent).join('/') + (isFile ? '.md' : '')
+          to: '/notes/' + segment
         }
       }),
     ]
