@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const safeDir = String(dir).replace(/\.\.|^\//g, '')
   const targetDir = path.join(notesDir, safeDir)
 
-  let items: { name: string; type: 'file' | 'folder'; path: string }[] = []
+  const items: { name: string; type: 'file' | 'folder'; path: string }[] = []
   try {
     const list = sortFilesAndFolders(await fs.readdir(targetDir, { withFileTypes: true }) as unknown as Dirent[])
     for (const file of list) {
@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     return { items }
-  } catch (e) {
+  } catch {
     return { items: [], error: 'Dossier introuvable' }
   }
 })

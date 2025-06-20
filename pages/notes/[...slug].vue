@@ -10,7 +10,7 @@
             <div v-for="item in items" :key="item.path" class="flex flex-col items-center cursor-pointer group">
               <NuxtLink
                 v-if="item.type === 'folder'"
-                :to="`/notes/${encodeURIComponent(item.path)}`"
+                :to="`/notes/${item.path.split('/').map(encodeURIComponent).join('/')}`"
                 class="flex flex-col items-center w-full"
               >
                 <UIcon name="lucide:folder" class="text-4xl mb-1 text-yellow-400 group-hover:scale-110 transition-transform" />
@@ -18,7 +18,7 @@
               </NuxtLink>
               <NuxtLink
                 v-else
-                :to="`/notes/${item.path.replace(/\.md$/, '').split('/').map(encodeURIComponent).join('/')}`"
+                :to="`/notes/${item.path.split('/').map(encodeURIComponent).join('/')}`"
                 class="flex flex-col items-center w-full"
               >
                 <UIcon name="lucide:file-text" class="text-4xl mb-1 text-slate-500 group-hover:scale-110 transition-transform" />
@@ -48,14 +48,14 @@ const path = Array.isArray(slug) ? slug.join('/') : slug
 const { data, pending, error } = await useFetch(`/api/notes?dir=${encodeURIComponent(path)}`)
 const items = data?.value?.items || []
 
-// Si le dossier n'existe pas ou est vide, on tente de charger le fichier markdown
-let isFolder = items.length > 0
+const isFolder = items.length > 0
 let note = null
 if (!isFolder) {
-  // On tente de charger le fichier markdown
+  // On retire l'extension .md si présente
+  const cleanPath = path.replace(/\.md$/, '')
   const { data: noteData } = await useAsyncData(
-    `note-${path}`,
-    () => queryCollection('content').path(`/notes/${path}`).first()
+    `note-${cleanPath}`,
+    () => queryCollection('content').path(`/notes/${cleanPath}`).first()
   )
   note = noteData.value
 }
@@ -63,10 +63,15 @@ if (!isFolder) {
 const breadcrumbItems = Array.isArray(slug)
   ? [
       { label: 'Notes', to: '/notes' },
-      ...slug.map((part, idx) => ({
-        label: part,
-        to: '/notes/' + slug.slice(0, idx + 1).join('/'),
-      })),
+      ...slug.map((part, idx, arr) => {
+        // Ajoute .md uniquement au dernier segment si c'est un fichier
+        const isLast = idx === arr.length - 1
+        const isFile = !isFolder && isLast
+        return {
+          label: part.replace(/\.md$/, ''),
+          to: '/notes/' + arr.slice(0, idx + 1).map(encodeURIComponent).join('/') + (isFile ? '.md' : '')
+        }
+      }),
     ]
   : [{ label: 'Notes', to: '/notes' }, { label: slug, to: '/notes/' + slug }];
 </script>
