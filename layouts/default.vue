@@ -8,9 +8,9 @@
           <UButton to="/about" color="primary" variant="link">À propos</UButton>
         </nav>
       </header>
-      <UMain>
+      <main>
         <NuxtPage />
-      </UMain>
+      </main>
     </UContainer>
   </UApp>
 </template>
