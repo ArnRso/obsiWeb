@@ -2,21 +2,33 @@
   <section>
     <UCard>
       <div v-if="pending">Chargement...</div>
-      <div v-else-if="!doc">Note introuvable</div>
+      <div v-else-if="error">Note introuvable</div>
       <div v-else>
-        <h2 class="text-lg font-bold mb-4">{{ doc.title || doc._file }}</h2>
-        <ContentRenderer :value="doc" class="prose max-w-none" />
+        <h2 class="text-lg font-bold mb-4">{{ title }}</h2>
+        <div>{{ content }}</div>
       </div>
     </UCard>
   </section>
 </template>
 
 <script setup lang="ts">
-import { queryContent } from '#content'
-
 const { slug } = useRoute().params
 const path = Array.isArray(slug) ? slug.join('/') : slug
-const { data: doc, pending } = await useAsyncData('note', () =>
-  queryContent('notes/' + path).findOne()
-)
+const { data, pending, error } = await useFetch(`/api/note?path=${encodeURIComponent(path)}.md`)
+
+let title = ''
+let content = ''
+if (data.value && data.value.content) {
+  // Extraction du frontmatter YAML (optionnel)
+  const match = data.value.content.match(/^---([\s\S]*?)---\n([\s\S]*)$/)
+  if (match) {
+    const frontmatter = match[1]
+    content = match[2]
+    const titleMatch = frontmatter.match(/title:\s*(.*)/)
+    if (titleMatch) title = titleMatch[1].trim()
+  } else {
+    content = data.value.content
+    title = path
+  }
+}
 </script>

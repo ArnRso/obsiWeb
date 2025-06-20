@@ -23,6 +23,7 @@ logs
 .env.*
 !.env.example
 
-# Notes versionné sans contenu
-notes/*
-!notes/.gitkeep
+# Versionner le dossier content/notes/ mais jamais son contenu (sauf .gitkeep)
+content/notes/*
+!content/notes/.gitkeep
+!content/notes/**/.gitkeep
