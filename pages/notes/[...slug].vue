@@ -18,7 +18,7 @@ const { data, pending, error } = await useFetch(`/api/note?path=${encodeURICompo
 
 let title = ''
 let content = ''
-if (data.value && data.value.content) {
+if (data.value && 'content' in data.value && data.value.content) {
   // Extraction du frontmatter YAML (optionnel)
   const match = data.value.content.match(/^---([\s\S]*?)---\n([\s\S]*)$/)
   if (match) {
