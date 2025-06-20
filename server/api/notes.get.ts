@@ -10,7 +10,8 @@ function sortFilesAndFolders(list: Dirent[]): Dirent[] {
 }
 
 export default defineEventHandler(async () => {
-  const notesDir = path.resolve(process.cwd(), 'notes')
+  // On pointe vers content/notes au lieu de notes
+  const notesDir = path.resolve(process.cwd(), 'content/notes')
 
   async function getAllMarkdownFiles(dir: string): Promise<string[]> {
     let results: string[] = []

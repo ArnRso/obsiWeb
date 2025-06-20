@@ -8,8 +8,9 @@ export default defineEventHandler(async (event) => {
     return { error: 'Chemin de note manquant' }
   }
   // Sécurise le chemin pour éviter les accès hors du dossier notes
-  const safePath = path.replace(/\.\.|^\//g, '')
-  const filePath = join(process.cwd(), 'notes', safePath)
+  const safePath = path.replace(/\.{2}|^\//g, '')
+  // Correction : lit dans content/notes
+  const filePath = join(process.cwd(), 'content', 'notes', safePath)
   try {
     const content = await readFile(filePath, 'utf-8')
     return { content }

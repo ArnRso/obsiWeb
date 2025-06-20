@@ -5,11 +5,11 @@
       <div v-if="pending" class="text-muted">Chargement...</div>
       <div v-else-if="error" class="text-error">Erreur lors du chargement des notes</div>
       <div v-else>
-        <UTree :items="tree" :open-all="true" color="neutral" class="w-full">
+        <UTree :items="tree" color="neutral" class="w-full">
           <template #item="{ item }">
             <UButton
               v-if="item.type === 'file'"
-              :to="`/notes/${encodeURIComponent(item.path)}`"
+              :to="`/notes/${item.path.replace(/\.md$/, '').split('/').map(encodeURIComponent).join('/')}`"
               color="primary"
               variant="link"
               class="truncate w-full text-left"
