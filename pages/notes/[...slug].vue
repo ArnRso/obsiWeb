@@ -25,7 +25,15 @@
         </UButtonGroup>
       </template>
       <template v-else>
-        Barre fichier
+        <div class="flex items-center gap-4">
+          <USwitch
+            v-model="isEditMode"
+            label="Mode édition"
+            checked-icon="i-lucide-pencil"
+            unchecked-icon="i-lucide-eye"
+            color="primary"
+          />
+        </div>
       </template>
     </UCard>
     <UCard>
@@ -79,7 +87,13 @@
         <template v-else-if="note">
           <div class="prose max-w-none">
             <h2 class="text-lg font-bold mb-4">{{ note.title || path }}</h2>
-            <ContentRenderer :value="note" />
+            <template v-if="isEditMode">
+              <textarea v-model="noteContent" rows="16" class="w-full border rounded p-2 font-mono text-sm mb-2"/>
+              <UButton color="primary" class="mt-2">Enregistrer</UButton>
+            </template>
+            <template v-else>
+              <ContentRenderer :value="note" />
+            </template>
           </div>
         </template>
         <template v-else>
@@ -91,8 +105,10 @@
 </template>
 
 <script setup lang="ts">
-import { useCookie } from '#app'
 import { ref, watch } from 'vue'
+import { useCookie } from '#app'
+const isEditMode = ref(false)
+const noteContent = ref('')
 const { slug } = useRoute().params
 const path = Array.isArray(slug) ? slug.join('/') : slug
 
@@ -103,15 +119,54 @@ const isFolder = items.length > 0
 const viewModeCookie = useCookie<'grid' | 'list' | 'detail'>('folderViewMode', { default: () => 'grid' })
 const viewMode = ref(viewModeCookie.value)
 watch(viewMode, (val) => { viewModeCookie.value = val })
-let note = null
+
+type MinimarkNode = [string, Record<string, unknown>, ...(string | MinimarkNode)[]];
+type MinimarkAst = MinimarkNode[];
+
+
+interface NoteContent {
+  body?: { type: string; value: MinimarkAst; toc?: unknown } | string;
+  title?: string;
+  [key: string]: unknown;
+}
+let note: NoteContent | null = null;
+async function fetchRawMarkdown(cleanPath: string): Promise<string> {
+  try {
+    // cleanPath doit être relatif à content/notes, sans /notes/ devant
+    const relativePath = cleanPath.replace(/^notes\//, '').replace(/^\//, '')
+    const { data } = await useFetch(`/api/note?path=${encodeURIComponent(relativePath)}`)
+    const val = data.value
+    if (val && typeof val === 'object' && 'content' in val && typeof val.content === 'string') {
+      return val.content
+    }
+    return ''
+  } catch {
+    return ''
+  }
+}
 if (!isFolder) {
   // On retire l'extension .md si présente
   const cleanPath = path.replace(/\.md$/, '')
+  // cleanPath est du type 'bienvenue' ou 'projets/alpha'
+  const filePath = cleanPath + '.md'
   const { data: noteData } = await useAsyncData(
     `note-${cleanPath}`,
     () => queryCollection('content').path(`/notes/${cleanPath}`).first()
-  )
-  note = noteData.value
+  );
+  note = noteData.value as unknown as NoteContent;
+  console.log('note structure', note);
+  watch(noteData, async (val) => {
+    note = val as unknown as NoteContent;
+    console.log('note structure', note);
+    if (typeof val?.body === 'string') {
+      noteContent.value = val.body;
+    } else if (val?.body && typeof val.body === 'object' && (val.body as { value?: unknown }).value) {
+      // On tente de charger le markdown brut côté serveur
+      noteContent.value = await fetchRawMarkdown(filePath)
+    } else {
+      noteContent.value = '';
+    }
+  }, { immediate: true });
 }
 
 const breadcrumbItems = Array.isArray(slug)
