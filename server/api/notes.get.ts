@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs'
 import path from 'path'
+import { defineEventHandler, getQuery } from 'h3'
 type Dirent = import('fs').Dirent;
 
 function sortFilesAndFolders(list: Dirent[]): Dirent[] {
@@ -9,24 +10,35 @@ function sortFilesAndFolders(list: Dirent[]): Dirent[] {
   })
 }
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
+  const { dir = '' } = getQuery(event)
   // On pointe vers content/notes au lieu de notes
   const notesDir = path.resolve(process.cwd(), 'content/notes')
+  // Sécurise le chemin pour éviter les accès hors du dossier notes
+  const safeDir = String(dir).replace(/\.\.|^\//g, '')
+  const targetDir = path.join(notesDir, safeDir)
 
-  async function getAllMarkdownFiles(dir: string): Promise<string[]> {
-    let results: string[] = []
-    const list = sortFilesAndFolders(await fs.readdir(dir, { withFileTypes: true }) as unknown as Dirent[])
+  let items: { name: string; type: 'file' | 'folder'; path: string }[] = []
+  try {
+    const list = sortFilesAndFolders(await fs.readdir(targetDir, { withFileTypes: true }) as unknown as Dirent[])
     for (const file of list) {
-      const filePath = path.join(dir, file.name)
+      if (file.name.startsWith('.')) continue // ignore fichiers cachés
       if (file.isDirectory()) {
-        results = results.concat(await getAllMarkdownFiles(filePath))
+        items.push({
+          name: file.name,
+          type: 'folder',
+          path: path.relative(notesDir, path.join(targetDir, file.name))
+        })
       } else if (file.name.endsWith('.md')) {
-        results.push(path.relative(notesDir, filePath))
+        items.push({
+          name: file.name,
+          type: 'file',
+          path: path.relative(notesDir, path.join(targetDir, file.name))
+        })
       }
     }
-    return results
+    return { items }
+  } catch (e) {
+    return { items: [], error: 'Dossier introuvable' }
   }
-
-  const files = await getAllMarkdownFiles(notesDir)
-  return { files }
 })
