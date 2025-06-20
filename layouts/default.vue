@@ -5,6 +5,7 @@
         <h1 class="text-xl font-bold">Mon Site</h1>
         <nav class="flex gap-2">
           <UButton to="/" color="primary" variant="link">Accueil</UButton>
+          <UButton to="/notes" color="primary" variant="link">Notes</UButton>
           <UButton to="/about" color="primary" variant="link">À propos</UButton>
         </nav>
       </header>
