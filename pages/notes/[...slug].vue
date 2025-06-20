@@ -5,28 +5,21 @@
       <NotesToolbar
         :is-selection-mode="isSelectionMode"
         :selected-for-delete="selectedItems"
+        :is-folder="isFolder"
+        :is-file="!isFolder && !!note"
+        :is-edit-mode="isEditMode"
+        :can-delete="!!canDelete"
         @new-folder="onNewFolder"
         @new-file="onNewFile"
         @toggle-selection="toggleSelectionMode"
         @delete-selected="() => onDeleteSelected(selectedItems)"
         @cancel-selection="cancelSelectionMode"
+        @update:is-edit-mode="(val) => (isEditMode = val)"
+        @delete-file="() => onDelete(!!canDelete, !!isFolder)"
       />
       <template v-if="!isFolder">
         <div class="flex items-center gap-4">
-          <USwitch
-            v-model="isEditMode"
-            label="Mode édition"
-            checked-icon="i-lucide-pencil"
-            unchecked-icon="i-lucide-eye"
-            color="primary"
-          />
-          <UButton
-            v-if="canDelete"
-            icon="i-lucide-trash"
-            color="error"
-            @click="() => onDelete(!!canDelete, !!isFolder)"
-            >Supprimer</UButton
-          >
+          <!-- USwitch et bouton Supprimer déplacés dans la toolbar -->
         </div>
       </template>
     </UCard>
