@@ -14,7 +14,9 @@ function sortFilesAndFolders(list: Dirent[]): Dirent[] {
 }
 
 export default defineEventHandler(async (event): Promise<NotesApiResponse> => {
-  const { dir = "" }: NotesQuery = getQuery(event);
+  let { dir = "" }: NotesQuery = getQuery(event);
+  // Décoder le chemin pour gérer les espaces et caractères spéciaux
+  dir = decodeURIComponent(dir);
   // On pointe vers content/notes au lieu de notes
   const notesDir = path.resolve(process.cwd(), "content/notes");
   // Sécurise le chemin pour éviter les accès hors du dossier notes
