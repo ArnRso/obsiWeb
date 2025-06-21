@@ -83,3 +83,13 @@ export interface BreadcrumbItem {
   label: string;
   to: string;
 }
+
+export interface RenameNotePayload {
+  oldPath: string;
+  newName: string;
+  isFolder: boolean;
+}
+export interface RenameNoteResponse {
+  success: boolean;
+  error?: string;
+}

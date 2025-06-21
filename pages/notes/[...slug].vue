@@ -16,6 +16,7 @@
         @cancel-selection="cancelSelectionMode"
         @update:is-edit-mode="(val) => (isEditMode = val)"
         @delete-file="() => onDelete(!!canDelete, !!isFolder)"
+        @rename-selected="openRenameModal"
       />
       <template v-if="isFile && !pending">
         <div class="flex items-center gap-4">
@@ -105,15 +106,48 @@
         </div>
       </template>
     </UModal>
+
+    <!-- Modale pour renommage de fichier/dossier -->
+    <UModal
+      v-model:open="isRenameModalOpen"
+      title="Renommer"
+      description="Modifier le nom de l'élément sélectionné."
+    >
+      <template #body>
+        <div class="p-4">
+          <UForm :state="renameState" @submit="onSubmitRename">
+            <UFormField label="Nouveau nom" name="name">
+              <UInput v-model="renameState.name" class="w-full" autofocus />
+            </UFormField>
+            <div class="flex gap-2 mt-4 justify-end">
+              <UButton
+                label="Annuler"
+                color="neutral"
+                variant="outline"
+                type="button"
+                @click="closeRenameModal"
+              />
+              <UButton
+                label="Renommer"
+                color="primary"
+                type="submit"
+                :disabled="!renameState.name.trim()"
+              />
+            </div>
+          </UForm>
+        </div>
+      </template>
+    </UModal>
   </section>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, reactive } from "vue";
 import type { FormSubmitEvent } from "@nuxt/ui";
-import { noteLinkFromPath } from "~/services/noteService";
+import { noteLinkFromPath } from "~/utils/noteLinkFromPath";
 import { useNoteActions } from "~/composables/useNoteActions";
 import { useContentResolver } from "~/composables/useContentResolver";
+import { useRenameModal } from "~/composables/useRenameModal";
 import NotesToolbar from "~/components/NotesToolbar.vue";
 import NotesGrid from "~/components/NotesGrid.vue";
 
@@ -162,10 +196,30 @@ const canDelete = computed(
   () => path.value && path.value !== "" && path.value !== "index"
 );
 
-const { onNewFolder, onNewFile, onDelete, onDeleteSelected } = useNoteActions(
-  path,
-  refresh
-);
+const {
+  onNewFolder,
+  onNewFile,
+  onDelete,
+  onDeleteSelected,
+  getFileNameWithoutMd,
+  getFileNameWithMd,
+  isValidFolderName,
+} = useNoteActions(path, refresh);
+
+const {
+  isRenameModalOpen,
+  renameState,
+  openRenameModal,
+  closeRenameModal,
+  onSubmitRename,
+} = useRenameModal({
+  items: () => items.value,
+  refresh,
+  cancelSelectionMode,
+  getFileNameWithoutMd,
+  getFileNameWithMd,
+  isValidFolderName,
+});
 
 // États pour la modale de création
 const isModalOpen = ref(false);

@@ -31,6 +31,14 @@
           @click="$emit('delete-selected')"
           >Supprimer la sélection</UButton
         >
+        <UButton
+          color="primary"
+          class="ml-2"
+          icon="i-lucide-edit"
+          :disabled="selectedForDelete.length !== 1"
+          @click="$emit('rename-selected', selectedForDelete[0])"
+          >Renommer</UButton
+        >
         <UButton color="neutral" class="ml-2" @click="$emit('cancel-selection')"
           >Annuler la sélection</UButton
         >
@@ -77,5 +85,6 @@ defineEmits([
   "cancel-selection",
   "update:isEditMode",
   "delete-file",
+  "rename-selected",
 ]);
 </script>
