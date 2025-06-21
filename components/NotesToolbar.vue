@@ -182,6 +182,25 @@
           </UButton>
         </UTooltip>
 
+        <!-- Menu déroulant pour le langage du bloc de code -->
+        <UDropdownMenu
+          v-if="editor && isEditMode"
+          :items="codeLanguages"
+          :ui="{ content: 'w-40' }"
+          :content="{ align: 'start', side: 'bottom', sideOffset: 8 }"
+        >
+          <UButton
+            title="Langage du code"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            class="!px-2 !py-1"
+            icon="i-lucide-terminal"
+          >
+            {{ currentCodeLanguageLabel }}
+          </UButton>
+        </UDropdownMenu>
+
         <!-- Séparateur -->
         <div class="w-px h-6 bg-gray-300 mx-1" />
 
@@ -317,4 +336,68 @@ const listItems = computed(() => [
     active: !!props.editor?.isActive("orderedList"),
   },
 ]);
+
+// Liste des langages supportés (à adapter selon lowlight)
+const codeLanguages = [
+  {
+    label: "Auto",
+    icon: "i-lucide-terminal",
+    onSelect: () => props.editor?.commands.setCodeBlock({ language: null }),
+    active: !props.editor?.getAttributes("codeBlock").language,
+  },
+  {
+    label: "JavaScript",
+    icon: "i-lucide-file-code",
+    onSelect: () =>
+      props.editor?.commands.setCodeBlock({ language: "javascript" }),
+    active: props.editor?.getAttributes("codeBlock").language === "javascript",
+  },
+  {
+    label: "TypeScript",
+    icon: "i-lucide-file-code-2",
+    onSelect: () =>
+      props.editor?.commands.setCodeBlock({ language: "typescript" }),
+    active: props.editor?.getAttributes("codeBlock").language === "typescript",
+  },
+  {
+    label: "Python",
+    icon: "i-lucide-file-code",
+    onSelect: () => props.editor?.commands.setCodeBlock({ language: "python" }),
+    active: props.editor?.getAttributes("codeBlock").language === "python",
+  },
+  {
+    label: "Markdown",
+    icon: "i-lucide-file-text",
+    onSelect: () =>
+      props.editor?.commands.setCodeBlock({ language: "markdown" }),
+    active: props.editor?.getAttributes("codeBlock").language === "markdown",
+  },
+  {
+    label: "HTML",
+    icon: "i-lucide-file-code",
+    onSelect: () => props.editor?.commands.setCodeBlock({ language: "html" }),
+    active: props.editor?.getAttributes("codeBlock").language === "html",
+  },
+  {
+    label: "CSS",
+    icon: "i-lucide-file-code",
+    onSelect: () => props.editor?.commands.setCodeBlock({ language: "css" }),
+    active: props.editor?.getAttributes("codeBlock").language === "css",
+  },
+  {
+    label: "JSON",
+    icon: "i-lucide-file-code",
+    onSelect: () => props.editor?.commands.setCodeBlock({ language: "json" }),
+    active: props.editor?.getAttributes("codeBlock").language === "json",
+  },
+];
+
+const currentCodeLanguageLabel = computed(() => {
+  const lang = props.editor?.getAttributes("codeBlock").language;
+  if (!lang) return "Auto";
+  const found = codeLanguages.find(
+    (l) => l.label.toLowerCase() === lang.toLowerCase()
+  );
+  return found ? found.label : lang;
+});
 </script>

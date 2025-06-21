@@ -81,6 +81,11 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (editor.value) editor.value.destroy();
 });
+const setCodeBlockLanguage = (language: string | null) => {
+  if (editor.value) {
+    editor.value.chain().focus().setCodeBlock({ language }).run();
+  }
+};
 
-defineExpose({ editor });
+defineExpose({ editor, setCodeBlockLanguage });
 </script>
