@@ -7,6 +7,12 @@ import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { Editor, EditorContent } from "@tiptap/vue-3";
 import StarterKit from "@tiptap/starter-kit";
 import { getDebouncedSaveFn } from "~/composables/useNoteActions";
+import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
+import "assets/css/highlightjs.css";
+
+const lowlight = createLowlight(common);
+
 const props = defineProps<{
   modelValue: string;
   editable?: boolean;
@@ -58,7 +64,12 @@ onMounted(() => {
   debouncedSave.value = createDebouncedSaveFnWithToast(props.filePath);
   editor.value = new Editor({
     content: props.modelValue,
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      CodeBlockLowlight.configure({
+        lowlight,
+      }),
+    ],
     editable: props.editable ?? true,
     onUpdate: () => {
       const html = editor.value!.getHTML();

@@ -36,7 +36,10 @@
           :on-note-item-click="onNoteItemClick"
         />
       </div>
-      <div v-else-if="isFile && note" class="prose max-w-none">
+      <div
+        v-else-if="isFile && note"
+        class="prose dark:prose-invert max-w-none prose-pre:bg-transparent prose-pre:text-inherit"
+      >
         <h2 class="text-lg font-bold mb-4">{{ note.title || path }}</h2>
         <client-only>
           <TiptapEditor
@@ -257,3 +260,7 @@ function onSubmitCreate(event: FormSubmitEvent<{ name: string }>) {
   closeNewItemModal();
 }
 </script>
+
+<style scoped>
+/* Retire le CSS custom, car on utilise maintenant les utilitaires Tailwind */
+</style>
