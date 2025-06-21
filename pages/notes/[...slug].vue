@@ -37,8 +37,13 @@
       </div>
       <div v-else-if="isFile && note" class="prose max-w-none">
         <h2 class="text-lg font-bold mb-4">{{ note.title || path }}</h2>
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div class="markdown-content" v-html="note.body" />
+        <client-only>
+          <TiptapEditor
+            v-model="noteBodyHtml"
+            :editable="isEditMode"
+            :file-path="path"
+          />
+        </client-only>
       </div>
       <div v-else-if="isNotFound">Note ou dossier introuvable</div>
     </UCard>
@@ -142,13 +147,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from "vue";
+import { ref, computed, reactive, watch } from "vue";
 import type { FormSubmitEvent } from "@nuxt/ui";
 import { noteLinkFromPath } from "~/utils/noteLink";
 import { useNoteActions } from "~/composables/useNoteActions";
 import { useContentResolver } from "~/composables/useContentResolver";
 import NotesToolbar from "~/components/NotesToolbar.vue";
 import NotesGrid from "~/components/NotesGrid.vue";
+import TiptapEditor from "~/components/TiptapEditor.vue";
 
 const isEditMode = ref(false);
 const { slug } = useRoute().params;
@@ -166,6 +172,21 @@ const {
   path,
   refresh,
 } = useContentResolver(slug);
+
+// Conversion du contenu de la note en string pour Tiptap
+const noteBodyHtml = ref("");
+watch(
+  () => note.value?.body,
+  (val) => {
+    noteBodyHtml.value =
+      typeof val === "string"
+        ? val
+        : typeof val?.value === "string"
+          ? val.value
+          : "";
+  },
+  { immediate: true }
+);
 
 // États pour la gestion de la sélection
 const isSelectionMode = ref(false);

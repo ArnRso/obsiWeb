@@ -9,6 +9,8 @@ import type {
   NoteItem,
 } from "~/types/notes";
 import type { FormSubmitEvent } from "@nuxt/ui";
+import debounce from "lodash.debounce";
+import TurndownService from "turndown";
 
 export function useNoteActions(
   path: MaybeRefOrGetter<string>,
@@ -148,6 +150,20 @@ export function useNoteActions(
     }
   }
 
+  // --- Sauvegarde automatique debouncée ---
+  const turndownService = new TurndownService();
+
+  async function saveNoteHtmlToMarkdown(
+    html: string,
+    filePath: string
+  ): Promise<void> {
+    const markdown = turndownService.turndown(html);
+    await $fetch("/api/notes/save", {
+      method: "POST",
+      body: { path: filePath, markdown },
+    });
+  }
+
   return {
     onNewFolder,
     onNewFile,
@@ -163,5 +179,22 @@ export function useNoteActions(
     openRenameModal,
     closeRenameModal,
     onSubmitRename,
+    saveNoteHtmlToMarkdown,
   };
+}
+
+export type DebouncedSaveFn = (html: string) => void;
+
+export function getDebouncedSaveFn(
+  filePath: string,
+  delay = 1000
+): DebouncedSaveFn {
+  const turndownService = new TurndownService();
+  return debounce((html: string) => {
+    const markdown = turndownService.turndown(html);
+    $fetch("/api/notes/save", {
+      method: "POST",
+      body: { path: filePath, markdown },
+    });
+  }, delay);
 }
