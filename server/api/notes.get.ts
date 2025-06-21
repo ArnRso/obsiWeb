@@ -17,8 +17,8 @@ export default defineEventHandler(async (event): Promise<NotesApiResponse> => {
   let { dir = "" }: NotesQuery = getQuery(event);
   // Décoder le chemin pour gérer les espaces et caractères spéciaux
   dir = decodeURIComponent(dir);
-  // On pointe vers content/notes au lieu de notes
-  const notesDir = path.resolve(process.cwd(), "content/notes");
+  // On pointe vers notes à la racine
+  const notesDir = path.resolve(process.cwd(), "notes");
   // Sécurise le chemin pour éviter les accès hors du dossier notes
   const safeDir = String(dir).replace(/\.{2}|^\//g, "");
   const targetDir = path.join(notesDir, safeDir);

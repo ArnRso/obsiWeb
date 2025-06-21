@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   }
   // Sécurise le chemin pour éviter les accès hors du dossier notes
   const safePath = body.path.replace(/\.\.|^\//g, "");
-  const baseDir = join(process.cwd(), "content", "notes");
+  const baseDir = join(process.cwd(), "notes");
   const absPath = join(baseDir, safePath);
   try {
     if (body.type === "folder") {

@@ -11,8 +11,8 @@ export default defineEventHandler(async (event) => {
   path = decodeURIComponent(path);
   // Sécurise le chemin pour éviter les accès hors du dossier notes
   const safePath = path.replace(/\.{2}|^\//g, "");
-  // Correction : lit dans content/notes
-  const notesDir = join(process.cwd(), "content", "notes");
+  // Correction : lit dans notes à la racine
+  const notesDir = join(process.cwd(), "notes");
   let filePath = join(notesDir, safePath);
   try {
     const content = await readFile(filePath, "utf-8");
