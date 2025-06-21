@@ -94,7 +94,6 @@ export function useContentResolver(
       ) {
         // Parser le markdown avec marked (plus simple)
         const htmlContent = await marked(rawContent.content);
-        console.log("Contenu HTML:", htmlContent);
 
         const noteContent: NoteContent = {
           title:
@@ -103,8 +102,6 @@ export function useContentResolver(
           body: htmlContent, // HTML string au lieu d'un AST
           _path: `/notes/${cleanPath}`,
         };
-
-        console.log("Note finale:", noteContent);
 
         return {
           type: "file",
