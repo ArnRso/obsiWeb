@@ -1,12 +1,12 @@
 <template>
   <section>
-    <UBreadcrumb :items="breadcrumbItems" class="mb-4" />
+    <UBreadcrumb :items="breadcrumbs" class="mb-4" />
     <UCard class="mb-4">
       <NotesToolbar
         :is-selection-mode="isSelectionMode"
         :selected-for-delete="selectedItems"
-        :is-folder="isStableFolder && !pending"
-        :is-file="isStableFile && !pending"
+        :is-folder="isFolder && !pending"
+        :is-file="isFile && !pending"
         :is-edit-mode="isEditMode"
         :can-delete="!!canDelete"
         @new-folder="() => openNewItemModal('folder')"
@@ -15,9 +15,9 @@
         @delete-selected="() => onDeleteSelected(selectedItems)"
         @cancel-selection="cancelSelectionMode"
         @update:is-edit-mode="(val) => (isEditMode = val)"
-        @delete-file="() => onDelete(!!canDelete, !!isStableFolder)"
+        @delete-file="() => onDelete(!!canDelete, !!isFolder)"
       />
-      <template v-if="isStableFile && !pending">
+      <template v-if="isFile && !pending">
         <div class="flex items-center gap-4">
           <!-- USwitch et bouton Supprimer déplacés dans la toolbar -->
         </div>
@@ -26,7 +26,7 @@
     <UCard>
       <div v-if="pending">Chargement...</div>
       <div v-else-if="error">Erreur lors du chargement</div>
-      <div v-else-if="isStableFolder">
+      <div v-else-if="isFolder">
         <NotesGrid
           :items="items"
           :is-selection-mode="isSelectionMode"
@@ -34,11 +34,11 @@
           :on-note-item-click="onNoteItemClick"
         />
       </div>
-      <div v-else-if="isStableFile && note" class="prose max-w-none">
+      <div v-else-if="isFile && note" class="prose max-w-none">
         <h2 class="text-lg font-bold mb-4">{{ note.title || path }}</h2>
         <ContentRenderer :value="note" />
       </div>
-      <div v-else-if="isStableFile">Note ou dossier introuvable</div>
+      <div v-else-if="isNotFound">Note ou dossier introuvable</div>
     </UCard>
 
     <!-- Modale pour création de fichier/dossier -->
@@ -111,130 +111,62 @@
 import { ref, computed, reactive } from "vue";
 import type { FormSubmitEvent } from "@nuxt/ui";
 import { noteLinkFromPath } from "~/services/noteService";
-import { useNotes } from "~/composables/useNotes";
 import { useNoteActions } from "~/composables/useNoteActions";
+import { useContentResolver } from "~/composables/useContentResolver";
 import NotesToolbar from "~/components/NotesToolbar.vue";
 import NotesGrid from "~/components/NotesGrid.vue";
-import type { NoteContent } from "~/types/notes";
 
 const isEditMode = ref(false);
 const { slug } = useRoute().params;
-const path = Array.isArray(slug) ? slug.join("/") : slug;
 
-const { items, pending, error, refresh } = useNotes(path);
+// Utiliser le nouveau composable pour résoudre le contenu
+const {
+  items,
+  note,
+  pending,
+  error,
+  isFile,
+  isFolder,
+  isNotFound,
+  breadcrumbs,
+  path,
+  refresh,
+} = useContentResolver(slug);
 
-// Déterminer le type de contenu de façon stable
-const contentType = useState(`content-type-${path}`, () => {
-  // Logique déterministe basée sur le path uniquement
-  if (path.endsWith(".md")) {
-    return "file";
-  }
-  // Si le path ne contient pas d'extension, c'est probablement un dossier
-  // Ou si c'est vide (racine), c'est un dossier
-  if (!path || path === "" || !path.includes(".")) {
-    return "folder";
-  }
-  // Par défaut, considérer comme un fichier si on a une extension
-  return "file";
-});
-
-// État stable pour savoir si on affiche un fichier ou un dossier
-const isStableFolder = computed(() => contentType.value === "folder");
-const isStableFile = computed(() => contentType.value === "file");
-
-// Charger les données de la note avec useAsyncData - seulement pour les fichiers
-const cleanPath = path.replace(/\.md$/, "");
-const { data: noteData } = await useAsyncData(
-  `note-${cleanPath}`,
-  async () => {
-    // Ne charger que si c'est un fichier basé sur la logique stable
-    if (contentType.value !== "file") return null;
-
-    try {
-      // Récupérer le contenu brut directement via l'API interne
-      const relativePath = cleanPath.replace(/^notes\//, "").replace(/^\//, "");
-      const rawContent = await $fetch(
-        `/api/note?path=${encodeURIComponent(relativePath)}`
-      );
-
-      if (
-        rawContent &&
-        typeof rawContent === "object" &&
-        "content" in rawContent &&
-        typeof rawContent.content === "string"
-      ) {
-        return {
-          title:
-            relativePath.split("/").pop()?.replace(/\.md$/, "") ||
-            "Note sans titre",
-          body: rawContent.content,
-          _path: `/notes/${cleanPath}`,
-        };
-      }
-      return null;
-    } catch (error) {
-      console.warn("Erreur lors de la récupération du contenu brut:", error);
-      return null;
-    }
-  },
-  {
-    watch: [contentType],
-    server: true,
-  }
-);
-
-const note = computed(() => noteData.value as unknown as NoteContent | null);
-
-// Utiliser useState pour garantir la cohérence serveur/client
-const breadcrumbItems = useState(`breadcrumbs-${path}`, () => {
-  if (Array.isArray(slug)) {
-    return [
-      { label: "Notes", to: "/notes/" },
-      ...slug.map((part, idx, arr) => {
-        const segment = arr.slice(0, idx + 1).join("/");
-        return {
-          label: part.replace(/\.md$/, ""),
-          to: `/notes/${segment}`,
-        };
-      }),
-    ];
-  } else {
-    return [
-      { label: "Notes", to: "/notes/" },
-      {
-        label: slug.replace(/\.md$/, ""),
-        to: `/notes/${slug}`,
-      },
-    ];
-  }
-});
-
+// États pour la gestion de la sélection
 const isSelectionMode = ref(false);
 const selectedItems = ref<string[]>([]);
+
 function toggleSelectionMode() {
   isSelectionMode.value = !isSelectionMode.value;
   if (!isSelectionMode.value) selectedItems.value = [];
 }
+
 function cancelSelectionMode() {
   isSelectionMode.value = false;
   selectedItems.value = [];
 }
-function onNoteItemClick(path: string) {
+
+function onNoteItemClick(itemPath: string) {
   if (isSelectionMode.value) {
-    const idx = selectedItems.value.indexOf(path);
-    if (idx === -1) selectedItems.value.push(path);
+    const idx = selectedItems.value.indexOf(itemPath);
+    if (idx === -1) selectedItems.value.push(itemPath);
     else selectedItems.value.splice(idx, 1);
   } else {
-    navigateTo(noteLinkFromPath(path));
+    navigateTo(noteLinkFromPath(itemPath));
   }
 }
-const canDelete = computed(() => path && path !== "" && path !== "index");
+
+const canDelete = computed(
+  () => path.value && path.value !== "" && path.value !== "index"
+);
 
 const { onNewFolder, onNewFile, onDelete, onDeleteSelected } = useNoteActions(
   path,
   refresh
 );
 
+// États pour la modale de création
 const isModalOpen = ref(false);
 const creationType = ref<"folder" | "file" | null>(null);
 const creationState = reactive({ name: "" });
@@ -244,11 +176,13 @@ function openNewItemModal(type: "folder" | "file") {
   creationState.name = "";
   isModalOpen.value = true;
 }
+
 function closeNewItemModal() {
   isModalOpen.value = false;
   creationType.value = null;
   creationState.name = "";
 }
+
 function onSubmitCreate(event: FormSubmitEvent<{ name: string }>) {
   if (creationType.value === "folder") {
     onNewFolder(event.data.name);
