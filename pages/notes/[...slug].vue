@@ -151,81 +151,29 @@ const { data: noteData } = await useAsyncData(
     if (contentType.value !== "file") return null;
 
     try {
-      // Récupérer d'abord les métadonnées de la note
-      const noteContent = await queryCollection("content")
-        .path(`/notes/${cleanPath}`)
-        .first();
+      // Récupérer le contenu brut directement via l'API interne
+      const relativePath = cleanPath.replace(/^notes\//, "").replace(/^\//, "");
+      const rawContent = await $fetch(
+        `/api/note?path=${encodeURIComponent(relativePath)}`
+      );
 
-      if (!noteContent) {
-        // Si pas de contenu trouvé, essayer de récupérer le contenu brut directement
-        try {
-          const relativePath = cleanPath
-            .replace(/^notes\//, "")
-            .replace(/^\//, "");
-          const rawContent = await $fetch(
-            `/api/note?path=${encodeURIComponent(relativePath)}`
-          );
-
-          if (
-            rawContent &&
-            typeof rawContent === "object" &&
-            "content" in rawContent &&
-            typeof rawContent.content === "string"
-          ) {
-            return {
-              title:
-                relativePath.split("/").pop()?.replace(/\.md$/, "") ||
-                "Note sans titre",
-              body: rawContent.content,
-              _path: `/notes/${cleanPath}`,
-            };
-          }
-        } catch (error) {
-          console.warn(
-            "Erreur lors de la récupération du contenu brut:",
-            error
-          );
-        }
-        return null;
-      }
-
-      // Si le body n'est pas directement disponible, récupérer le contenu brut
       if (
-        !noteContent.body ||
-        (typeof noteContent.body === "object" &&
-          noteContent.body &&
-          "value" in noteContent.body)
+        rawContent &&
+        typeof rawContent === "object" &&
+        "content" in rawContent &&
+        typeof rawContent.content === "string"
       ) {
-        try {
-          const relativePath = cleanPath
-            .replace(/^notes\//, "")
-            .replace(/^\//, "");
-          const rawContent = await $fetch(
-            `/api/note?path=${encodeURIComponent(relativePath)}`
-          );
-
-          if (
-            rawContent &&
-            typeof rawContent === "object" &&
-            "content" in rawContent &&
-            typeof rawContent.content === "string"
-          ) {
-            // Remplacer le body par le contenu brut
-            return {
-              ...noteContent,
-              body: rawContent.content,
-            };
-          }
-        } catch (error) {
-          console.warn(
-            "Erreur lors de la récupération du contenu brut:",
-            error
-          );
-        }
+        return {
+          title:
+            relativePath.split("/").pop()?.replace(/\.md$/, "") ||
+            "Note sans titre",
+          body: rawContent.content,
+          _path: `/notes/${cleanPath}`,
+        };
       }
-
-      return noteContent;
-    } catch {
+      return null;
+    } catch (error) {
+      console.warn("Erreur lors de la récupération du contenu brut:", error);
       return null;
     }
   },
