@@ -187,14 +187,16 @@ export type DebouncedSaveFn = (html: string) => void;
 
 export function getDebouncedSaveFn(
   filePath: string,
-  delay = 1000
+  delay = 1000,
+  onSaved?: () => void
 ): DebouncedSaveFn {
   const turndownService = new TurndownService();
-  return debounce((html: string) => {
+  return debounce(async (html: string) => {
     const markdown = turndownService.turndown(html);
-    $fetch("/api/notes/save", {
+    await $fetch("/api/notes/save", {
       method: "POST",
       body: { path: filePath, markdown },
     });
+    if (onSaved) onSaved();
   }, delay);
 }

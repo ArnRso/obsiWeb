@@ -7,21 +7,31 @@ import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { Editor, EditorContent } from "@tiptap/vue-3";
 import StarterKit from "@tiptap/starter-kit";
 import { getDebouncedSaveFn } from "~/composables/useNoteActions";
-
 const props = defineProps<{
   modelValue: string;
   editable?: boolean;
   filePath: string;
 }>();
 const emit = defineEmits<(e: "update:modelValue", value: string) => void>();
-
 const editor = ref<Editor>();
 const debouncedSave = ref<((html: string) => void) | null>(null);
-
-function getDebouncedSaveFnLocal(filePath: string) {
-  return getDebouncedSaveFn(filePath);
+const toast = useToast();
+function createDebouncedSaveFnWithToast(filePath: string) {
+  let toastId: string | number | undefined;
+  return getDebouncedSaveFn(filePath, 1000, () => {
+    if (toastId) toast.remove(toastId);
+    const t = toast.add({
+      title: "Note enregistrée",
+      description: "La note a bien été sauvegardée.",
+      color: "success",
+      duration: 1200, // Toast disparaît plus vite (1,2s)
+    });
+    toastId = t.id;
+  });
 }
-
+async function saveAndToast(html: string) {
+  if (debouncedSave.value) debouncedSave.value(html);
+}
 watch(
   () => props.modelValue,
   (value) => {
@@ -30,7 +40,6 @@ watch(
     }
   }
 );
-
 watch(
   () => props.editable,
   (value) => {
@@ -39,16 +48,14 @@ watch(
     }
   }
 );
-
 watch(
   () => props.filePath,
   (newPath) => {
-    debouncedSave.value = getDebouncedSaveFnLocal(newPath);
+    debouncedSave.value = createDebouncedSaveFnWithToast(newPath);
   }
 );
-
 onMounted(() => {
-  debouncedSave.value = getDebouncedSaveFnLocal(props.filePath);
+  debouncedSave.value = createDebouncedSaveFnWithToast(props.filePath);
   editor.value = new Editor({
     content: props.modelValue,
     extensions: [StarterKit],
@@ -56,11 +63,10 @@ onMounted(() => {
     onUpdate: () => {
       const html = editor.value!.getHTML();
       emit("update:modelValue", html);
-      if (debouncedSave.value) debouncedSave.value(html);
+      saveAndToast(html);
     },
   });
 });
-
 onBeforeUnmount(() => {
   if (editor.value) editor.value.destroy();
 });
