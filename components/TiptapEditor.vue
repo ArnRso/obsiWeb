@@ -1,4 +1,5 @@
 <template>
+  <TiptapMenuBar :editor="editor" />
   <editor-content :editor="editor" />
 </template>
 
@@ -7,6 +8,7 @@ import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { Editor, EditorContent } from "@tiptap/vue-3";
 import StarterKit from "@tiptap/starter-kit";
 import { getDebouncedSaveFn } from "~/composables/useNoteActions";
+import TiptapMenuBar from "~/components/TiptapMenuBar.vue";
 const props = defineProps<{
   modelValue: string;
   editable?: boolean;
@@ -70,4 +72,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (editor.value) editor.value.destroy();
 });
+
+defineExpose({ editor });
 </script>
