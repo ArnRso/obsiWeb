@@ -7,8 +7,7 @@ import type {
 } from "~/types/notes";
 
 export function useNoteActions(path: string, refresh: () => Promise<void>) {
-  async function onNewFolder() {
-    const name = window.prompt("Nom du nouveau dossier ?");
+  async function onNewFolder(name: string) {
     if (!name) return;
     const payload: CreateNotePayload = {
       type: "folder",
@@ -20,13 +19,13 @@ export function useNoteActions(path: string, refresh: () => Promise<void>) {
     });
     await refresh();
   }
-  async function onNewFile() {
-    let name = window.prompt("Nom du nouveau fichier ? (sans extension)");
+  async function onNewFile(name: string) {
     if (!name) return;
-    if (!name.endsWith(".md")) name += ".md";
+    let fileName = name;
+    if (!fileName.endsWith(".md")) fileName += ".md";
     const payload: CreateNotePayload = {
       type: "file",
-      path: path ? path + "/" + name : name,
+      path: path ? path + "/" + fileName : fileName,
     };
     await $fetch<CreateNoteResponse>("/api/notes/new", {
       method: "post",

@@ -9,8 +9,8 @@
         :is-file="isStableFile && !pending"
         :is-edit-mode="isEditMode"
         :can-delete="!!canDelete"
-        @new-folder="onNewFolder"
-        @new-file="onNewFile"
+        @new-folder="() => openNewItemModal('folder')"
+        @new-file="() => openNewItemModal('file')"
         @toggle-selection="toggleSelectionMode"
         @delete-selected="() => onDeleteSelected(selectedItems)"
         @cancel-selection="cancelSelectionMode"
@@ -40,11 +40,76 @@
       </div>
       <div v-else-if="isStableFile">Note ou dossier introuvable</div>
     </UCard>
+
+    <!-- Modale pour création de fichier/dossier -->
+    <UModal
+      v-model:open="isModalOpen"
+      :title="
+        creationType === 'folder'
+          ? 'Créer un dossier'
+          : creationType === 'file'
+            ? 'Créer un fichier'
+            : 'Créer un nouvel élément'
+      "
+      description="Veuillez renseigner un nom pour le nouvel élément."
+    >
+      <template #body>
+        <div class="p-4">
+          <UForm :state="creationState" @submit="onSubmitCreate">
+            <UFormField
+              :label="
+                creationType === 'folder'
+                  ? 'Nom du dossier'
+                  : creationType === 'file'
+                    ? 'Nom du fichier'
+                    : 'Nom'
+              "
+              name="name"
+            >
+              <UInput
+                v-model="creationState.name"
+                :placeholder="
+                  creationType === 'folder'
+                    ? 'Nom du dossier'
+                    : creationType === 'file'
+                      ? 'Nom du fichier (ex: note.md)'
+                      : 'Nom'
+                "
+                class="w-full"
+                autofocus
+              />
+            </UFormField>
+            <div class="flex gap-2 mt-4 justify-end">
+              <UButton
+                label="Fermer"
+                color="neutral"
+                variant="outline"
+                type="button"
+                @click="closeNewItemModal"
+              />
+              <UButton
+                :label="
+                  creationType === 'folder'
+                    ? 'Créer le dossier'
+                    : creationType === 'file'
+                      ? 'Créer le fichier'
+                      : 'Créer'
+                "
+                color="primary"
+                type="submit"
+                :disabled="!creationState.name.trim()"
+              />
+            </div>
+          </UForm>
+        </div>
+      </template>
+    </UModal>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, reactive } from "vue";
+import type { FormSubmitEvent } from "@nuxt/ui";
 import { noteLinkFromPath } from "~/services/noteService";
 import { useNotes } from "~/composables/useNotes";
 import { useNoteActions } from "~/composables/useNoteActions";
@@ -221,4 +286,27 @@ const { onNewFolder, onNewFile, onDelete, onDeleteSelected } = useNoteActions(
   path,
   refresh
 );
+
+const isModalOpen = ref(false);
+const creationType = ref<"folder" | "file" | null>(null);
+const creationState = reactive({ name: "" });
+
+function openNewItemModal(type: "folder" | "file") {
+  creationType.value = type;
+  creationState.name = "";
+  isModalOpen.value = true;
+}
+function closeNewItemModal() {
+  isModalOpen.value = false;
+  creationType.value = null;
+  creationState.name = "";
+}
+function onSubmitCreate(event: FormSubmitEvent<{ name: string }>) {
+  if (creationType.value === "folder") {
+    onNewFolder(event.data.name);
+  } else if (creationType.value === "file") {
+    onNewFile(event.data.name);
+  }
+  closeNewItemModal();
+}
 </script>
