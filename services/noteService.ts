@@ -31,10 +31,4 @@ export async function renameNoteOrFolder(
 
 // --- Partie utilitaire frontend (safe) ---
 
-/**
- * Génère un lien vers une note (utilisable côté client)
- * (NE PAS importer ce fichier côté client, mais copier cette fonction dans un fichier dédié si besoin)
- */
-export function noteLinkFromPath(path: string): string {
-  return "/notes/" + path.split("/").map(encodeURIComponent).join("/");
-}
+// (noteLinkFromPath supprimée, utiliser utils/noteLink.ts côté frontend)

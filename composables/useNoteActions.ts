@@ -1,6 +1,6 @@
 import { toValue } from "vue";
 import type { MaybeRefOrGetter } from "vue";
-import { noteLinkFromPath } from "~/services/noteService";
+import { noteLinkFromPath } from "~/utils/noteLink";
 import type {
   CreateNotePayload,
   CreateNoteResponse,

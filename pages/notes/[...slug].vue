@@ -144,10 +144,9 @@
 <script setup lang="ts">
 import { ref, computed, reactive } from "vue";
 import type { FormSubmitEvent } from "@nuxt/ui";
-import { noteLinkFromPath } from "~/utils/noteLinkFromPath";
+import { noteLinkFromPath } from "~/utils/noteLink";
 import { useNoteActions } from "~/composables/useNoteActions";
 import { useContentResolver } from "~/composables/useContentResolver";
-import { useRenameModal } from "~/composables/useRenameModal";
 import NotesToolbar from "~/components/NotesToolbar.vue";
 import NotesGrid from "~/components/NotesGrid.vue";
 
@@ -201,25 +200,12 @@ const {
   onNewFile,
   onDelete,
   onDeleteSelected,
-  getFileNameWithoutMd,
-  getFileNameWithMd,
-  isValidFolderName,
-} = useNoteActions(path, refresh);
-
-const {
   isRenameModalOpen,
   renameState,
   openRenameModal,
   closeRenameModal,
   onSubmitRename,
-} = useRenameModal({
-  items: () => items.value,
-  refresh,
-  cancelSelectionMode,
-  getFileNameWithoutMd,
-  getFileNameWithMd,
-  isValidFolderName,
-});
+} = useNoteActions(path, refresh, () => items.value, cancelSelectionMode);
 
 // États pour la modale de création
 const isModalOpen = ref(false);
