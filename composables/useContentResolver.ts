@@ -1,4 +1,5 @@
 import { computed } from "vue";
+import { marked } from "marked";
 import type {
   NoteContent,
   NotesApiResponse,
@@ -43,20 +44,26 @@ export function useContentResolver(
 
   // Fonction pour charger le contenu d'un dossier
   const loadFolderContent = async (pathStr: string): Promise<ContentData> => {
-    const response = await $fetch<NotesApiResponse>(
-      `/api/notes?dir=${encodeURIComponent(pathStr)}`
-    );
+    try {
+      const response = await $fetch<NotesApiResponse>(
+        `/api/notes?dir=${encodeURIComponent(pathStr)}`
+      );
 
-    if (response.currentType === "folder") {
-      return {
-        type: "folder",
-        items: response.items || [],
-        note: null,
-      };
-    } else if (response.currentType === "file") {
-      // Si l'API dit que c'est un fichier, on le traite comme tel
-      return await loadFileContent(pathStr);
-    } else {
+      if (response.currentType === "folder") {
+        return {
+          type: "folder",
+          items: response.items || [],
+          note: null,
+        };
+      } else {
+        return {
+          type: "notfound",
+          items: [],
+          note: null,
+        };
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement du dossier:", error);
       return {
         type: "notfound",
         items: [],
@@ -65,7 +72,7 @@ export function useContentResolver(
     }
   };
 
-  // Fonction pour charger le contenu d'un fichier
+  // Fonction pour charger le contenu d'un fichier en parsant le markdown
   const loadFileContent = async (pathStr: string): Promise<ContentData> => {
     // Nettoyer le path pour l'API note
     const cleanPath = pathStr
@@ -73,38 +80,51 @@ export function useContentResolver(
       .replace(/^notes\//, "")
       .replace(/^\//, "");
 
-    const rawContent = await $fetch(
-      `/api/note?path=${encodeURIComponent(cleanPath)}`
-    );
+    try {
+      // Utiliser votre API existante pour récupérer le contenu markdown brut
+      const rawContent = await $fetch(
+        `/api/note?path=${encodeURIComponent(cleanPath)}`
+      );
 
-    if (
-      rawContent &&
-      typeof rawContent === "object" &&
-      "content" in rawContent &&
-      typeof rawContent.content === "string"
-    ) {
-      return {
-        type: "file",
-        items: [],
-        note: {
+      if (
+        rawContent &&
+        typeof rawContent === "object" &&
+        "content" in rawContent &&
+        typeof rawContent.content === "string"
+      ) {
+        // Parser le markdown avec marked (plus simple)
+        const htmlContent = await marked(rawContent.content);
+        console.log("Contenu HTML:", htmlContent);
+
+        const noteContent: NoteContent = {
           title:
             cleanPath.split("/").pop()?.replace(/\.md$/, "") ||
             "Note sans titre",
-          body: rawContent.content,
+          body: htmlContent, // HTML string au lieu d'un AST
           _path: `/notes/${cleanPath}`,
-        } as NoteContent,
-      };
-    } else {
-      // Si le fichier n'est pas trouvé, vérifier si c'est peut-être un dossier
-      try {
-        return await loadFolderContent(pathStr);
-      } catch {
+        };
+
+        console.log("Note finale:", noteContent);
+
+        return {
+          type: "file",
+          items: [],
+          note: noteContent,
+        };
+      } else {
         return {
           type: "notfound",
           items: [],
           note: null,
         };
       }
+    } catch (error) {
+      console.error("Erreur lors du chargement du fichier:", error);
+      return {
+        type: "notfound",
+        items: [],
+        note: null,
+      };
     }
   };
 

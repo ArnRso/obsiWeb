@@ -36,7 +36,8 @@
       </div>
       <div v-else-if="isFile && note" class="prose max-w-none">
         <h2 class="text-lg font-bold mb-4">{{ note.title || path }}</h2>
-        <ContentRenderer :value="note" />
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div class="markdown-content" v-html="note.body" />
       </div>
       <div v-else-if="isNotFound">Note ou dossier introuvable</div>
     </UCard>
