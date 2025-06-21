@@ -2,7 +2,10 @@
   <section>
     <UCard>
       <h2 class="text-lg font-bold mb-4">À propos</h2>
-      <p>Ce projet est une application de gestion de notes markdown avec Nuxt, Nuxt UI et Nuxt Content.</p>
+      <p>
+        Ce projet est une application de gestion de notes markdown avec Nuxt,
+        Nuxt UI et Nuxt Content.
+      </p>
       <ul class="mt-4 list-disc list-inside text-sm text-gray-600">
         <li>Navigation moderne avec Nuxt UI</li>
         <li>Explorateur de fichiers markdown</li>
