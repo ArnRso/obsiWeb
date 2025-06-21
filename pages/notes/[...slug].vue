@@ -9,6 +9,7 @@
         :is-file="isFile && !pending"
         :is-edit-mode="isEditMode"
         :can-delete="!!canDelete"
+        :editor="tiptapEditorRef?.editor"
         @new-folder="() => openNewItemModal('folder')"
         @new-file="() => openNewItemModal('file')"
         @toggle-selection="toggleSelectionMode"
@@ -39,6 +40,7 @@
         <h2 class="text-lg font-bold mb-4">{{ note.title || path }}</h2>
         <client-only>
           <TiptapEditor
+            ref="tiptapEditorRef"
             v-model="noteBodyHtml"
             :editable="isEditMode"
             :file-path="path"
@@ -157,6 +159,7 @@ import NotesGrid from "~/components/NotesGrid.vue";
 import TiptapEditor from "~/components/TiptapEditor.vue";
 
 const isEditMode = ref(false);
+const tiptapEditorRef = ref();
 const { slug } = useRoute().params;
 
 // Utiliser le nouveau composable pour résoudre le contenu
