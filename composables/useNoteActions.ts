@@ -65,8 +65,6 @@ export function useNoteActions(
     if (res.success) {
       const parent = currentPath.split("/").slice(0, -1).join("/");
       await navigateTo(noteLinkFromPath(parent));
-    } else {
-      window.alert("Erreur lors de la suppression : " + (res.error || ""));
     }
   }
   async function onDeleteSelected(selectedForDelete: string[]) {
@@ -84,6 +82,7 @@ export function useNoteActions(
       });
     }
     await refresh();
+    if (cancelSelectionMode) cancelSelectionMode();
   }
 
   // Helpers pour la gestion des noms
@@ -141,7 +140,7 @@ export function useNoteActions(
       if (res.success) {
         await refresh();
         closeRenameModal();
-        cancelSelectionMode && cancelSelectionMode();
+        if (cancelSelectionMode) cancelSelectionMode();
       } else {
         alert(res.error || "Erreur lors du renommage");
       }

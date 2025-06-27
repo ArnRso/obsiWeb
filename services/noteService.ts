@@ -13,8 +13,8 @@ export async function renameNoteOrFolder(
   newName: string
 ): Promise<void> {
   const absOldPath = path.join(NOTES_ROOT, oldPath);
-  const parentDir = path.dirname(absOldPath);
-  const absNewPath = path.join(parentDir, newName);
+  // Correction : newName est toujours relatif à NOTES_ROOT
+  const absNewPath = path.join(NOTES_ROOT, newName);
   try {
     await fs.access(absOldPath);
   } catch {

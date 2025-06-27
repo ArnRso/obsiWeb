@@ -18,6 +18,7 @@
         @update:is-edit-mode="(val) => (isEditMode = val)"
         @delete-file="() => onDelete(!!canDelete, !!isFolder)"
         @rename-selected="openRenameModal"
+        @move-selected="openMoveModal"
       />
       <template v-if="isFile && !pending">
         <div class="flex items-center gap-4">
@@ -148,6 +149,61 @@
         </div>
       </template>
     </UModal>
+
+    <!-- Modale pour déplacement de fichier/dossier -->
+    <UModal
+      v-model:open="isMoveModalOpen"
+      title="Déplacer"
+      description="Sélectionnez le dossier de destination."
+    >
+      <template #body>
+        <div class="p-4">
+          <div class="mb-2 text-sm text-gray-500">
+            Dossier courant : <span class="font-mono">{{ currentMoveFolder || '/' }}</span>
+          </div>
+          <div v-if="moveTargets.length > 1" class="mb-2 text-xs text-gray-400">
+            {{ moveTargets.length }} éléments sélectionnés
+          </div>
+          <div v-else-if="moveTargets.length === 1" class="mb-2 text-xs text-gray-400">
+            {{ moveTargets[0].split('/').pop() }}
+          </div>
+          <div class="flex flex-col gap-2">
+            <UButton
+              v-if="currentMoveFolder !== ''"
+              icon="i-lucide-arrow-up"
+              color="neutral"
+              variant="soft"
+              @click="goUpMoveFolder"
+            >Remonter</UButton>
+            <UButton
+              v-for="folder in moveFolders"
+              :key="folder"
+              icon="i-lucide-folder"
+              color="primary"
+              variant="soft"
+              class="justify-start"
+              @click="goToMoveFolder(folder)"
+            >{{ folder.split('/').pop() }}</UButton>
+          </div>
+          <div class="mt-4 flex gap-2 justify-end">
+            <UButton
+              label="Annuler"
+              color="neutral"
+              variant="outline"
+              type="button"
+              @click="closeMoveModal"
+            />
+            <UButton
+              :label="moveTargets.length > 1 ? 'Déplacer ici (' + moveTargets.length + ')' : 'Déplacer ici'"
+              color="primary"
+              type="button"
+              :disabled="allInCurrentFolder"
+              @click="onSubmitMove"
+            />
+          </div>
+        </div>
+      </template>
+    </UModal>
   </section>
 </template>
 
@@ -259,6 +315,107 @@ function onSubmitCreate(event: FormSubmitEvent<{ name: string }>) {
   }
   closeNewItemModal();
 }
+
+// États pour la modale de déplacement
+const isMoveModalOpen = ref(false);
+const moveTargets = ref<string[]>([]);
+const moveSourceFolder = ref("");
+const currentMoveFolder = ref("");
+const moveFolders = ref<string[]>([]);
+
+function openMoveModal(itemPath?: string) {
+  // Si itemPath est fourni (déplacement via bouton sur un seul élément)
+  // Sinon, utiliser la sélection multiple
+  if (itemPath) {
+    moveTargets.value = [itemPath];
+    // Dossier parent de l'élément à déplacer
+    const parts = itemPath.split("/");
+    parts.pop();
+    const parent = parts.join("/");
+    moveSourceFolder.value = parent;
+    currentMoveFolder.value = parent;
+    fetchFoldersIn(parent);
+  } else {
+    // Sélection multiple
+    if (!selectedItems.value.length) return;
+    moveTargets.value = [...selectedItems.value];
+    // On prend le dossier parent du premier élément sélectionné comme point de départ
+    const parts = selectedItems.value[0].split("/");
+    parts.pop();
+    const parent = parts.join("/");
+    moveSourceFolder.value = parent;
+    currentMoveFolder.value = parent;
+    fetchFoldersIn(parent);
+  }
+  isMoveModalOpen.value = true;
+}
+function closeMoveModal() {
+  isMoveModalOpen.value = false;
+  moveTargets.value = [];
+  moveSourceFolder.value = "";
+  currentMoveFolder.value = "";
+  moveFolders.value = [];
+}
+async function fetchFoldersIn(folder: string) {
+  // Appel API pour récupérer les dossiers dans le dossier donné
+  const res = await fetch(`/api/notes?dir=${encodeURIComponent(folder)}`);
+  const data = await res.json();
+  type FolderItem = { name: string; type: "folder"; path: string };
+  moveFolders.value = (data.items || []).filter((i: FolderItem) => i.type === "folder").map((i: FolderItem) => i.path);
+}
+function goToMoveFolder(folder: string) {
+  currentMoveFolder.value = folder;
+  fetchFoldersIn(folder);
+}
+function goUpMoveFolder() {
+  if (currentMoveFolder.value === "") return;
+  const parts = currentMoveFolder.value.split("/");
+  parts.pop();
+  currentMoveFolder.value = parts.join("/");
+  fetchFoldersIn(currentMoveFolder.value);
+}
+async function onSubmitMove() {
+  if (!moveTargets.value.length) return;
+  for (const oldPath of moveTargets.value) {
+    // Extraire uniquement le nom du fichier/dossier (pas de sous-arborescence)
+    const name = oldPath.split("/").pop() || oldPath;
+    // Le chemin cible est simplement currentMoveFolder + '/' + name (ou juste name si racine)
+    const newPath = currentMoveFolder.value ? currentMoveFolder.value.replace(/\/$/, "") + "/" + name : name;
+    // Empêcher de déplacer un dossier dans lui-même ou un de ses sous-dossiers
+    if (
+      oldPath === currentMoveFolder.value ||
+      (oldPath.endsWith(".md") === false && currentMoveFolder.value.startsWith(oldPath + "/"))
+    ) {
+      continue;
+    }
+    if (oldPath === newPath) continue; // Ne rien faire si même chemin
+    try {
+      const res = await fetch("/api/notes/rename", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oldPath, newName: newPath }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        // Gérer l'erreur si nécessaire
+      }
+    } catch {
+      // Erreur ignorée
+    }
+  }
+  closeMoveModal();
+  selectedItems.value = [];
+  await refresh();
+}
+
+const allInCurrentFolder = computed(() =>
+  moveTargets.value.length > 0 && moveTargets.value.every(path => {
+    const parts = path.split("/");
+    parts.pop();
+    const parent = parts.join("/");
+    return parent === currentMoveFolder.value;
+  })
+);
 </script>
 
 <style scoped>

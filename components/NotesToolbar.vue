@@ -34,6 +34,13 @@
         <UButton
           color="primary"
           class="ml-2"
+          icon="i-lucide-move"
+          :disabled="!selectedForDelete.length"
+          @click="$emit('move-selected')"
+        >Déplacer</UButton>
+        <UButton
+          color="primary"
+          class="ml-2"
           icon="i-lucide-edit"
           :disabled="selectedForDelete.length !== 1"
           @click="$emit('rename-selected', selectedForDelete[0])"
@@ -116,7 +123,7 @@
             :variant="editor?.isActive('bold') ? 'solid' : 'soft'"
             size="sm"
             class="!px-2 !py-1"
-            @click="() => editor?.chain().focus().toggleBold().run()"
+            @click="() => { editor?.chain().focus().toggleBold().run(); return void 0; }"
           >
             <UIcon name="i-lucide-bold" />
           </UButton>
@@ -131,7 +138,7 @@
             :variant="editor?.isActive('italic') ? 'solid' : 'soft'"
             size="sm"
             class="!px-2 !py-1"
-            @click="() => editor?.chain().focus().toggleItalic().run()"
+            @click="() => { editor?.chain().focus().toggleItalic().run(); return void 0; }"
           >
             <UIcon name="i-lucide-italic" />
           </UButton>
@@ -146,7 +153,7 @@
             :variant="editor?.isActive('strike') ? 'solid' : 'soft'"
             size="sm"
             class="!px-2 !py-1"
-            @click="() => editor?.chain().focus().toggleStrike().run()"
+            @click="() => { editor?.chain().focus().toggleStrike().run(); return void 0; }"
           >
             <UIcon name="i-lucide-strikethrough" />
           </UButton>
@@ -161,7 +168,7 @@
             :variant="editor?.isActive('blockquote') ? 'solid' : 'soft'"
             size="sm"
             class="!px-2 !py-1"
-            @click="() => editor?.chain().focus().toggleBlockquote().run()"
+            @click="() => { editor?.chain().focus().toggleBlockquote().run(); return void 0; }"
           >
             <UIcon name="i-lucide-quote" />
           </UButton>
@@ -176,7 +183,7 @@
             :variant="editor?.isActive('code') ? 'solid' : 'soft'"
             size="sm"
             class="!px-2 !py-1"
-            @click="() => editor?.chain().focus().toggleCode().run()"
+            @click="() => { editor?.chain().focus().toggleCode().run(); return void 0; }"
           >
             <UIcon name="i-lucide-code" />
           </UButton>
@@ -213,7 +220,7 @@
             variant="soft"
             size="sm"
             class="!px-2 !py-1"
-            @click="() => editor?.chain().focus().undo().run()"
+            @click="() => { editor?.chain().focus().undo().run(); return void 0; }"
           >
             <UIcon name="i-lucide-undo" />
           </UButton>
@@ -228,7 +235,7 @@
             variant="soft"
             size="sm"
             class="!px-2 !py-1"
-            @click="() => editor?.chain().focus().redo().run()"
+            @click="() => { editor?.chain().focus().redo().run(); return void 0; }"
           >
             <UIcon name="i-lucide-redo" />
           </UButton>
@@ -243,7 +250,7 @@
             variant="soft"
             size="sm"
             class="!px-2 !py-1"
-            @click="() => editor?.chain().focus().setParagraph().run()"
+            @click="() => { editor?.chain().focus().setParagraph().run(); return void 0; }"
           >
             ¶
           </UButton>
@@ -258,7 +265,7 @@
             variant="soft"
             size="sm"
             class="!px-2 !py-1"
-            @click="() => editor?.chain().focus().setHardBreak().run()"
+            @click="() => { editor?.chain().focus().setHardBreak().run(); return void 0; }"
           >
             ↵
           </UButton>
@@ -273,9 +280,7 @@
             variant="soft"
             size="sm"
             class="!px-2 !py-1"
-            @click="
-              () => editor?.chain().focus().clearNodes().unsetAllMarks().run()
-            "
+            @click="() => { editor?.chain().focus().clearNodes().unsetAllMarks().run(); return void 0; }"
           >
             <UIcon name="i-lucide-eraser" />
           </UButton>
@@ -307,6 +312,7 @@ defineEmits([
   "update:isEditMode",
   "delete-file",
   "rename-selected",
+  "move-selected",
 ]);
 
 const headingItems = computed(() => [
@@ -342,7 +348,7 @@ const codeLanguages = [
   {
     label: "Auto",
     icon: "i-lucide-terminal",
-    onSelect: () => props.editor?.commands.setCodeBlock({ language: null }),
+    onSelect: () => props.editor?.commands.setCodeBlock({ language: "" }),
     active: !props.editor?.getAttributes("codeBlock").language,
   },
   {
